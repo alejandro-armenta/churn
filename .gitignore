@@ -3,3 +3,4 @@ Scripts/
 __pycache__/
 pyvenv.cfg
 listings/
+venv/
