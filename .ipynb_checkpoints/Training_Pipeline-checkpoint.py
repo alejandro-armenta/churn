@@ -6,6 +6,11 @@ from collections import Counter
 from scipy.cluster.hierarchy import linkage, fcluster
 from scipy.spatial.distance import squareform
 
+from sklearn.linear_model import LogisticRegression
+from math import exp
+import pickle
+
+
 #GET STATISTICS
 
 def GenerateStats(path_file):
@@ -180,10 +185,106 @@ def CreateLoadingMatrix():
     groupmets.to_csv('Generated/groupmets.csv')
 
 
+def ApplyLoadingMatrix():
+    score_data = pd.read_csv('Generated/scores.csv', index_col=[0,1])
+    
+    data_2group = score_data.drop('is_churn',axis=1)
 
+    load_mat_df = pd.read_csv('Generated/load_matrix.csv', index_col=[0])
+
+    load_mat_ndarray = load_mat_df.to_numpy()
+
+    ndarray_2group = data_2group[load_mat_df.index.values].to_numpy()
+    
+    grouped_ndarray = np.matmul(
+        ndarray_2group,
+        load_mat_ndarray
+    )
+
+    churn_data_grouped = pd.DataFrame(
+        grouped_ndarray, 
+        columns=load_mat_df.columns.values, 
+        index=score_data.index
+    )
+
+    churn_data_grouped['is_churn'] = score_data['is_churn']
+    churn_data_grouped
+
+    churn_data_grouped.to_csv('Generated/groupscore.csv')
+    
+
+def LogisticRegressionAnalysis():
+    grouped_data = pd.read_csv('Generated/groupscore.csv',index_col=[0,1])
+    grouped_data
+
+    y = grouped_data['is_churn'].astype(np.bool)
+    #is retention 
+    y = ~y
+    
+    y
+
+    X = grouped_data.drop(['is_churn'], axis=1)
+    X
+
+    #lasso regression l1
+    #automatic feature selection
+    
+    retain_reg = LogisticRegression(fit_intercept=True, solver='liblinear', penalty='l1')
+    retain_reg.fit(X, y)
+
+    def s_curve(x):
+        return 1.0 / (1.0 + np.exp(-x))
+        
+    
+    #bias term predicted
+    average_retain = s_curve(retain_reg.intercept_)
+    average_retain
+    
+    one_stdev_retains = np.array([
+        s_curve(retain_reg.intercept_ + c) for c in retain_reg.coef_[0]
+    ])
+    
+    one_stdev_impact = one_stdev_retains - average_retain
+    
+    average_retain
+    one_stdev_impact
+
+    group_lists = pd.read_csv('Generated/groupmets.csv', index_col=0)
+    group_lists
+
+    
+    coef_df = pd.DataFrame.from_dict(
+        {
+            'group_metric_offset':np.append(group_lists.index, 'offset'),
+            'weight': np.append(retain_reg.coef_[0],retain_reg.intercept_),
+            'retain_impact': np.append(one_stdev_impact, average_retain),
+            'group_metrics': np.append(group_lists['metrics'],'baseline')
+        }
+    )
+    coef_df
+
+    coef_df.sort_values(by=['weight'],ascending=False, inplace=True)
+    coef_df.to_csv('Generated/logreg_summary.csv',index=False)
+
+    with open('Generated/model.pkl', 'wb') as fid:
+        print(fid)
+        pickle.dump(retain_reg, fid)
+
+
+    predictions = retain_reg.predict_proba(X)
+    retain_reg.classes_
+
+    predict_df = pd.DataFrame(predictions, index=X.index, columns=['churn_prob','retain_prob'])
+    predict_df
+
+    predict_df.to_csv("Generated/predictions.csv", header=True)
+    
 
 
 GenerateStats('Generated/original.csv')
 ScoreData()
 GenerateStats('Generated/scores.csv')
 CreateLoadingMatrix()
+ApplyLoadingMatrix()
+LogisticRegressionAnalysis()
+
