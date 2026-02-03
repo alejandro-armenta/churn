@@ -51,25 +51,21 @@ def ScoreData():
     #estas son las normales
     skew_threshold = 2.8
     skewed_columns = (stats['skew'] > skew_threshold) & (stats['min'] >= 0.0)
-    skewed_columns = skewed_columns[skewed_columns]
-    skewed_columns
+    skewed = skewed_columns[skewed_columns]
     
-    for col in skewed_columns.keys():
+    for col in skewed.keys():
         data_scores[col] = np.log(1.0 + data_scores[col])
     
     fattail_columns = (stats['skew'] > skew_threshold) & (stats['min'] < 0.0)
-    fattail_columns = fattail_columns[fattail_columns]
-    fattail_columns
+    fattail = fattail_columns[fattail_columns]
     
-    for col in fattail_columns.keys():
+    for col in fattail.keys():
         data_scores[col] = np.log(
             data_scores[col] + 
             np.sqrt(np.power(data_scores[col],2) + 1.0))
     
     mean_vals = data_scores.mean()
     std_vals = data_scores.std()
-    #mean_vals.at['like_per_month']
-    #mean_vals.at['account_tenure']
     
     data_scores = (data_scores-mean_vals)/std_vals
     
@@ -77,15 +73,24 @@ def ScoreData():
     data_scores
     
     data_scores.to_csv("Generated/scores.csv",header=True)
+
+    print(skewed_columns)
+    print(fattail_columns)
+    print(mean_vals)
+    print(std_vals)
     
-    pd.DataFrame(
+    score_params_df = pd.DataFrame(
         {
             'skew_score':skewed_columns,
             'fattail_score':fattail_columns,
             'mean':mean_vals,
             'std':std_vals
-        }
-    ).to_csv('Generated/score_params.csv', header=True)
+        },index=skewed_columns.index
+    )
+
+    print(score_params_df)
+    
+    score_params_df.to_csv('Generated/score_params.csv')
 
 def CreateLoadingMatrix():
     score_data = pd.read_csv('Generated/scores.csv', index_col=[0,1])
