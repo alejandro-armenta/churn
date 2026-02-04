@@ -96,8 +96,8 @@ def ScoreData(path_directory):
     
     score_params_df.to_csv(path_directory + '/score_params.csv')
 
-def CreateLoadingMatrix():
-    score_data = pd.read_csv('Generated/scores.csv', index_col=[0,1])
+def CreateLoadingMatrix(path_directory):
+    score_data = pd.read_csv(path_directory + '/scores.csv', index_col=[0,1])
     score_data
     score_data.drop('is_churn',axis=1, inplace=True)
     #estas son antes de ordenarlas
@@ -179,7 +179,7 @@ def CreateLoadingMatrix():
     loadmat_df = pd.DataFrame(load_mat, index=metric_columns, columns=column_names)
     loadmat_df
 
-    loadmat_df.to_csv('Generated/load_matrix.csv')
+    loadmat_df.to_csv(path_directory + '/load_matrix.csv')
 
     group_lists = [
         '|'.join(relabeled_df[relabeled_df['group'] == g]['column']) 
@@ -191,15 +191,16 @@ def CreateLoadingMatrix():
     groupmets = pd.DataFrame(group_lists, columns=['metrics'], index=loadmat_df.columns.values)
     groupmets
 
-    groupmets.to_csv('Generated/groupmets.csv')
+    groupmets.to_csv(path_directory + '/groupmets.csv')
 
 
-def ApplyLoadingMatrix():
-    score_data = pd.read_csv('Generated/scores.csv', index_col=[0,1])
+def ApplyLoadingMatrix(path_directory):
+    
+    score_data = pd.read_csv(path_directory + '/scores.csv', index_col=[0,1])
     
     data_2group = score_data.drop('is_churn',axis=1)
 
-    load_mat_df = pd.read_csv('Generated/load_matrix.csv', index_col=[0])
+    load_mat_df = pd.read_csv(path_directory + '/load_matrix.csv', index_col=[0])
 
     load_mat_ndarray = load_mat_df.to_numpy()
 
@@ -219,11 +220,11 @@ def ApplyLoadingMatrix():
     churn_data_grouped['is_churn'] = score_data['is_churn']
     churn_data_grouped
 
-    churn_data_grouped.to_csv('Generated/groupscore.csv')
+    churn_data_grouped.to_csv(path_directory + '/groupscore.csv')
     
 
-def LogisticRegressionAnalysis():
-    grouped_data = pd.read_csv('Generated/groupscore.csv',index_col=[0,1])
+def LogisticRegressionAnalysis(path_directory):
+    grouped_data = pd.read_csv(path_directory + '/groupscore.csv',index_col=[0,1])
     grouped_data
 
     y = grouped_data['is_churn'].astype(np.bool)
@@ -258,7 +259,7 @@ def LogisticRegressionAnalysis():
     average_retain
     one_stdev_impact
 
-    group_lists = pd.read_csv('Generated/groupmets.csv', index_col=0)
+    group_lists = pd.read_csv(path_directory + '/groupmets.csv', index_col=0)
     group_lists
 
     
@@ -273,9 +274,9 @@ def LogisticRegressionAnalysis():
     coef_df
 
     coef_df.sort_values(by=['weight'],ascending=False, inplace=True)
-    coef_df.to_csv('Generated/logreg_summary.csv',index=False)
+    coef_df.to_csv(path_directory + '/logreg_summary.csv',index=False)
 
-    with open('Generated/model.pkl', 'wb') as fid:
+    with open(path_directory + '/model.pkl', 'wb') as fid:
         print(fid)
         pickle.dump(retain_reg, fid)
 
@@ -286,7 +287,9 @@ def LogisticRegressionAnalysis():
     predict_df = pd.DataFrame(predictions, index=X.index, columns=['churn_prob','retain_prob'])
     predict_df
 
-    predict_df.to_csv("Generated/predictions.csv", header=True)
+    predict_df.to_csv(path_directory + "/predictions.csv", header=True)
+
+
     
 def CreateDataset(dataset_path, path_directory):
     
@@ -312,7 +315,7 @@ def CreateDataset(dataset_path, path_directory):
     df = pd.read_sql(sql_query,connection, index_col=['account_id','observation_date'])
     df.to_csv(path_directory + '/original.csv',header=True)
 
-def CreateCurrentDataset(dataset_path):
+def CreateCurrentDataset(dataset_path, path_directory):
     DB_USER = 'postgres'
     DB_PASSWORD = 'postgres'
     DB_HOST = 'localhost'
@@ -334,14 +337,14 @@ def CreateCurrentDataset(dataset_path):
     print(connection)
 
     df = pd.read_sql(sql_query,connection, index_col=['account_id','last_metric_time'])
-    df.to_csv('Generated/test_set.csv', header=True)
+    df.to_csv(path_directory + '/test_set.csv', header=True)
 
 
-def RescoringCurrentDataset():
-    load_mat_df = pd.read_csv('Generated/load_matrix.csv', index_col=0)
-    score_df = pd.read_csv('Generated/score_params.csv', index_col=0).fillna(False)
+def RescoringCurrentDataset(path_directory):
+    load_mat_df = pd.read_csv(path_directory + '/load_matrix.csv', index_col=0)
+    score_df = pd.read_csv(path_directory + '/score_params.csv', index_col=0).fillna(False)
     
-    current_data = pd.read_csv('Generated/test_set.csv', index_col=[0,1])
+    current_data = pd.read_csv(path_directory + '/test_set.csv', index_col=[0,1])
 
     for col in score_df[score_df['skew_score']].index.values:
         #print(col)
@@ -359,7 +362,7 @@ def RescoringCurrentDataset():
 
     print(scaled_data)
 
-    scaled_data.to_csv('Generated/current_scores.csv')
+    scaled_data.to_csv(path_directory + '/current_scores.csv')
 
     grouped_ndarray = np.matmul(scaled_data.to_numpy(), load_mat_df.to_numpy())
     grouped_ndarray
@@ -368,14 +371,15 @@ def RescoringCurrentDataset():
 
     print(current_data_grouped)
     
-    current_data_grouped.to_csv('Generated/current_groupscore.csv', header=True)
+    current_data_grouped.to_csv(path_directory + '/current_groupscore.csv', header=True)
 
-def Forecasting():
-    with open('Generated/model.pkl',mode='rb') as fid:
+def Forecasting(path_directory):
+    
+    with open(path_directory + '/model.pkl',mode='rb') as fid:
         logreg_model = pickle.load(fid)
         print(logreg_model)
     
-    current_score_df = pd.read_csv('Generated/current_groupscore.csv', index_col=[0,1])
+    current_score_df = pd.read_csv(path_directory + '/current_groupscore.csv', index_col=[0,1])
     current_score_df.shape
 
     predictions = logreg_model.predict_proba(current_score_df.to_numpy())
@@ -388,7 +392,7 @@ def Forecasting():
 
     print(predict_df)
     
-    predict_df.to_csv('Generated/current_predictions.csv', header=True)
+    predict_df.to_csv(path_directory + '/current_predictions.csv', header=True)
 
     plt.figure(figsize=(6,4))
     n, bins, _ = plt.hist(predict_df['churn_prob'].values, bins=20, color="black")
@@ -396,7 +400,9 @@ def Forecasting():
     plt.ylabel('# of customers')
     plt.title('Histogram of active customer churn probability')
     plt.grid()
-    plt.savefig('Generated/churn_hist.png',format='png')
+    plt.savefig(path_directory + '/churn_hist.png',
+                format='png')
+    
     plt.close()
 
     hist_df = pd.DataFrame(
@@ -408,26 +414,34 @@ def Forecasting():
 
     print(hist_df)
 
-    hist_df.to_csv('Generated/current_churnhist.csv', header=True)
+    hist_df.to_csv(path_directory + '/current_churnhist.csv', header=True)
+
+
 
 import argparse
 from pathlib import Path
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description="A ml pipeline")
+    parser = argparse.ArgumentParser(description="A machine learning pipeline for churn prediction.")
+    
     parser.add_argument("train_sql_path", help="Path to sql file to extract training dataset.")
+    
     parser.add_argument("test_sql_path", help="Path to sql file to extract test dataset.")
+    
+    parser.add_argument("output_directory", help="Path to output directory.")
 
     args = parser.parse_args()
 
     print(args)
 
-    #print(type(Path(args.train_sql_path).parent))
+    #CREASTE EL DIRECTORIO
+    
+    os.makedirs(args.output_directory, exist_ok=True)
+    
+    path = str(Path(args.output_directory))
 
-    path = str(Path(args.train_sql_path).parent)
-
-    print(type(path))
+    print(path)
     
     CreateDataset(args.train_sql_path, path)
 
@@ -437,15 +451,17 @@ if __name__ == "__main__":
     
     GenerateStats(path + '/scores.csv')
     
+    CreateLoadingMatrix(path)
+    
+    ApplyLoadingMatrix(path)
+    
+    LogisticRegressionAnalysis(path)
+    
+    CreateCurrentDataset(args.test_sql_path, path)
+    
+    RescoringCurrentDataset(path)
+    
+    Forecasting(path)    
+
     """
-    CreateLoadingMatrix()
-    
-    ApplyLoadingMatrix()
-    
-    LogisticRegressionAnalysis()
-    
-    CreateCurrentDataset(args.test_sql_path)
-    
-    RescoringCurrentDataset()
-    Forecasting()    
     """
