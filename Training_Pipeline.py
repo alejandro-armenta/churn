@@ -12,6 +12,9 @@ import pickle
 
 from sqlalchemy import create_engine
 
+import matplotlib.pyplot as plt
+
+
 #GET STATISTICS
 
 def GenerateStats(path_file):
@@ -428,7 +431,241 @@ def CreateDataset():
 
     df = pd.read_sql(sql_query,connection, index_col=['account_id','observation_date'])
     df.to_csv('Generated/original.csv',header=True)
+
+def CreateCurrentDataset():
+    DB_USER = 'postgres'
+    DB_PASSWORD = 'postgres'
+    DB_HOST = 'localhost'
+    DB_PORT = '5432'
+    DB_NAME = 'churn'
     
+    database_url = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    
+    print(database_url)
+
+    sql_query = """SET
+      search_path TO socialnet7;
+    
+    WITH
+      metric_date AS (
+        SELECT
+          MAX(metric_time) AS last_metric_time
+        FROM
+          metric
+      ),
+      --son todas las tenures de la ultima fecha medida
+      account_tenures AS (
+        SELECT
+          account_id,
+          metric_value AS account_tenure
+        FROM
+          metric
+          INNER JOIN metric_date ON metric_time = last_metric_time
+        WHERE
+          metric_name_id = 8 --account tenure
+          AND metric_value >= 14
+      )
+      --tienes todas las subscripciones del id con la copia del tenure last
+    SELECT
+      s.account_id,
+      d.last_metric_time,
+      SUM(
+        CASE
+          WHEN metric_name_id = 0 THEN metric_value
+          ELSE 0
+        END
+      ) AS like_per_month,
+      SUM(
+        CASE
+          WHEN metric_name_id = 1 THEN metric_value
+          ELSE 0
+        END
+      ) AS newfriend_per_month,
+      SUM(
+        CASE
+          WHEN metric_name_id = 2 THEN metric_value
+          ELSE 0
+        END
+      ) AS post_per_month,
+      SUM(
+        CASE
+          WHEN metric_name_id = 3 THEN metric_value
+          ELSE 0
+        END
+      ) AS adview_per_month,
+      SUM(
+        CASE
+          WHEN metric_name_id = 4 THEN metric_value
+          ELSE 0
+        END
+      ) AS dislike_per_month,
+      SUM(
+        CASE
+          WHEN metric_name_id = 33 THEN metric_value
+          ELSE 0
+        END
+      ) AS unfriend_per_month,
+      SUM(
+        CASE
+          WHEN metric_name_id = 6 THEN metric_value
+          ELSE 0
+        END
+      ) AS message_per_month,
+      SUM(
+        CASE
+          WHEN metric_name_id = 7 THEN metric_value
+          ELSE 0
+        END
+      ) AS reply_per_month,
+      SUM(
+        CASE
+          WHEN metric_name_id = 21 THEN metric_value
+          ELSE 0
+        END
+      ) AS adview_per_post,
+      SUM(
+        CASE
+          WHEN metric_name_id = 22 THEN metric_value
+          ELSE 0
+        END
+      ) AS reply_per_message,
+      SUM(
+        CASE
+          WHEN metric_name_id = 23 THEN metric_value
+          ELSE 0
+        END
+      ) AS like_per_post,
+      SUM(
+        CASE
+          WHEN metric_name_id = 24 THEN metric_value
+          ELSE 0
+        END
+      ) AS post_per_message,
+      SUM(
+        CASE
+          WHEN metric_name_id = 28 THEN metric_value
+          ELSE 0
+        END
+      ) AS unfriend_per_newfriend,
+      SUM(
+        CASE
+          WHEN metric_name_id = 27 THEN metric_value
+          ELSE 0
+        END
+      ) AS dislike_pcnt,
+      SUM(
+        CASE
+          WHEN metric_name_id = 30 THEN metric_value
+          ELSE 0
+        END
+      ) AS newfriend_pcnt_chng,
+      SUM(
+        CASE
+          WHEN metric_name_id = 31 THEN metric_value
+          ELSE 0
+        END
+      ) AS days_since_newfriend
+    FROM
+      metric m
+      INNER JOIN metric_date d ON m.metric_time = d.last_metric_time
+      INNER JOIN account_tenures a ON a.account_id = m.account_id
+      INNER JOIN subscription s ON m.account_id = s.account_id
+    WHERE
+      s.start_date <= d.last_metric_time
+      AND (
+        s.end_date >= d.last_metric_time
+        OR s.end_date IS NULL
+      )
+    GROUP BY
+      s.account_id,
+      d.last_metric_time
+    ORDER BY
+      s.account_id;
+      """
+    
+    print(sql_query)
+
+    engine = create_engine(database_url)
+    connection = engine.connect()
+    
+    print(connection)
+
+    df = pd.read_sql(sql_query,connection, index_col=['account_id','last_metric_time'])
+    df.to_csv('Generated/test_set.csv', header=True)
+
+
+def RescoringCurrentDataset():
+    load_mat_df = pd.read_csv('Generated/load_matrix.csv', index_col=0)
+    score_df = pd.read_csv('Generated/score_params.csv', index_col=0).fillna(False)
+    
+    current_data = pd.read_csv('Generated/test_set.csv', index_col=[0,1])
+
+    for col in score_df[score_df['skew_score']].index.values:
+        #print(col)
+        current_data[col] = np.log(1.0 + current_data[col])
+
+    for col in score_df[score_df['fattail_score']].index.values:
+        current_data[col] = np.log(
+            current_data[col] + 
+            np.sqrt(np.power(current_data[col],2) + 1.0)
+        )
+
+    current_data=current_data[score_df.index.values]
+    scaled_data = (current_data - score_df['mean']) / score_df['std']
+    scaled_data
+
+    print(scaled_data)
+
+    scaled_data.to_csv('Generated/current_scores.csv')
+
+    grouped_ndarray = np.matmul(scaled_data.to_numpy(), load_mat_df.to_numpy())
+    grouped_ndarray
+
+    current_data_grouped = pd.DataFrame(grouped_ndarray,columns=load_mat_df.columns, index=current_data.index)
+
+    print(current_data_grouped)
+    
+    current_data_grouped.to_csv('Generated/current_groupscore.csv', header=True)
+
+def Forecasting():
+    with open('Generated/model.pkl',mode='rb') as fid:
+        logreg_model = pickle.load(fid)
+        print(logreg_model)
+    
+    current_score_df = pd.read_csv('Generated/current_groupscore.csv', index_col=[0,1])
+    current_score_df.shape
+
+    predictions = logreg_model.predict_proba(current_score_df.to_numpy())
+    predictions
+    logreg_model.classes_
+
+    predict_df = pd.DataFrame(predictions, 
+             columns=['churn_prob','retention_prob'], 
+             index=current_score_df.index)
+
+    print(predict_df)
+    
+    predict_df.to_csv('Generated/current_predictions.csv', header=True)
+
+    plt.figure(figsize=(6,4))
+    n, bins, _ = plt.hist(predict_df['churn_prob'].values, bins=20, color="black")
+    plt.xlabel('churn probabilty')
+    plt.ylabel('# of customers')
+    plt.title('Histogram of active customer churn probability')
+    plt.grid()
+    plt.savefig('Generated/churn_hist.png',format='png')
+    plt.close()
+
+    hist_df = pd.DataFrame(
+        {
+            'n':n,
+            'bins':bins[1:],
+        }
+    )
+
+    print(hist_df)
+
+    hist_df.to_csv('Generated/current_churnhist.csv', header=True)
 
 CreateDataset()
 GenerateStats('Generated/original.csv')
@@ -437,4 +674,10 @@ GenerateStats('Generated/scores.csv')
 CreateLoadingMatrix()
 ApplyLoadingMatrix()
 LogisticRegressionAnalysis()
+
+CreateCurrentDataset()
+RescoringCurrentDataset()
+Forecasting()
+
+
 
