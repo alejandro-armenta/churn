@@ -36,18 +36,18 @@ def GenerateStats(path_file):
     summary.to_csv(i.split('.')[0] + '_stats.csv', header=True)
 
 
-def ScoreData():
+def ScoreData(path_directory):
     
     #SCORE DATA
     
-    churn_data = pd.read_csv('Generated/original.csv', index_col=[0,1])
+    churn_data = pd.read_csv(path_directory + '/original.csv', index_col=[0,1])
     churn_data
     
     data_scores = churn_data.copy()
     data_scores = data_scores.drop('is_churn', axis=1)
     data_scores
     
-    stats = pd.read_csv('Generated/original_stats.csv', index_col=0)
+    stats = pd.read_csv(path_directory + '/original_stats.csv', index_col=0)
     stats
     
     stats = stats.drop('is_churn', axis=0)
@@ -76,7 +76,7 @@ def ScoreData():
     data_scores['is_churn'] = churn_data['is_churn']
     data_scores
     
-    data_scores.to_csv("Generated/scores.csv",header=True)
+    data_scores.to_csv(path_directory + "/scores.csv",header=True)
 
     print(skewed_columns)
     print(fattail_columns)
@@ -94,7 +94,7 @@ def ScoreData():
 
     print(score_params_df)
     
-    score_params_df.to_csv('Generated/score_params.csv')
+    score_params_df.to_csv(path_directory + '/score_params.csv')
 
 def CreateLoadingMatrix():
     score_data = pd.read_csv('Generated/scores.csv', index_col=[0,1])
@@ -288,7 +288,8 @@ def LogisticRegressionAnalysis():
 
     predict_df.to_csv("Generated/predictions.csv", header=True)
     
-def CreateDataset():
+def CreateDataset(dataset_path, path_directory):
+    
     DB_USER = 'postgres'
     DB_PASSWORD = 'postgres'
     DB_HOST = 'localhost'
@@ -298,129 +299,8 @@ def CreateDataset():
     database_url = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     print(database_url)
 
-    sql_query = """set search_path to socialnet7;
-    
-    with observation_params as (
-    select  
-        interval '7 day' as metric_period,
-        '2020-03-01'::timestamp as obs_start,
-        '2020-05-10'::timestamp as obs_end
-        )
-    select 
-        --esta metrica es un churn si o no
-        --esta metrica esta dentro del rango de fechas si o no
-        
-        m.account_id, observation_date, is_churn,
-        --sum(case when metric_name_id = 0 then metric_value else 0 end) as like_per_month,
-        --sum(case when metric_name_id = 1 then metric_value else 0 end) as newfriend_per_month
-    
-        SUM(
-        CASE
-          WHEN metric_name_id = 0 THEN metric_value
-          ELSE 0
-        END
-      ) AS like_per_month,
-      SUM(
-        CASE
-          WHEN metric_name_id = 1 THEN metric_value
-          ELSE 0
-        END
-      ) AS newfriend_per_month,
-      SUM(
-        CASE
-          WHEN metric_name_id = 2 THEN metric_value
-          ELSE 0
-        END
-      ) AS post_per_month,
-      SUM(
-        CASE
-          WHEN metric_name_id = 3 THEN metric_value
-          ELSE 0
-        END
-      ) AS adview_per_month,
-      SUM(
-        CASE
-          WHEN metric_name_id = 4 THEN metric_value
-          ELSE 0
-        END
-      ) AS dislike_per_month,
-      SUM(
-        CASE
-          WHEN metric_name_id = 33 THEN metric_value
-          ELSE 0
-        END
-      ) AS unfriend_per_month,
-      SUM(
-        CASE
-          WHEN metric_name_id = 6 THEN metric_value
-          ELSE 0
-        END
-      ) AS message_per_month,
-      SUM(
-        CASE
-          WHEN metric_name_id = 7 THEN metric_value
-          ELSE 0
-        END
-      ) AS reply_per_month,
-      SUM(
-        CASE
-          WHEN metric_name_id = 21 THEN metric_value
-          ELSE 0
-        END
-      ) AS adview_per_post,
-      SUM(
-        CASE
-          WHEN metric_name_id = 22 THEN metric_value
-          ELSE 0
-        END
-      ) AS reply_per_message,
-      SUM(
-        CASE
-          WHEN metric_name_id = 23 THEN metric_value
-          ELSE 0
-        END
-      ) AS like_per_post,
-      SUM(
-        CASE
-          WHEN metric_name_id = 24 THEN metric_value
-          ELSE 0
-        END
-      ) AS post_per_message,
-      SUM(
-        CASE
-          WHEN metric_name_id = 28 THEN metric_value
-          ELSE 0
-        END
-      ) AS unfriend_per_newfriend,
-      SUM(
-        CASE
-          WHEN metric_name_id = 27 THEN metric_value
-          ELSE 0
-        END
-      ) AS dislike_pcnt,
-      SUM(
-        CASE
-          WHEN metric_name_id = 30 THEN metric_value
-          ELSE 0
-        END
-      ) AS newfriend_pcnt_chng,
-      SUM(
-        CASE
-          WHEN metric_name_id = 31 THEN metric_value
-          ELSE 0
-        END
-      ) AS days_since_newfriend
-        
-        --observation_date
-        --count(m.account_id)
-        
-        from metric m 
-        inner join observation_params on metric_time BETWEEN obs_start and obs_end
-        inner join observation o on m.account_id = o.account_id 
-        and m.metric_time > (o.observation_date - metric_period)::timestamp 
-        and m.metric_time <= o.observation_date::timestamp
-    group by m.account_id, m.metric_time, observation_date, is_churn
-    order by observation_date, m.account_id"""
+    with open(dataset_path, 'r') as sql_file:
+        sql_query = sql_file.read()
     
     print(sql_query)
 
@@ -430,9 +310,9 @@ def CreateDataset():
     print(connection)
 
     df = pd.read_sql(sql_query,connection, index_col=['account_id','observation_date'])
-    df.to_csv('Generated/original.csv',header=True)
+    df.to_csv(path_directory + '/original.csv',header=True)
 
-def CreateCurrentDataset():
+def CreateCurrentDataset(dataset_path):
     DB_USER = 'postgres'
     DB_PASSWORD = 'postgres'
     DB_HOST = 'localhost'
@@ -443,146 +323,9 @@ def CreateCurrentDataset():
     
     print(database_url)
 
-    sql_query = """SET
-      search_path TO socialnet7;
-    
-    WITH
-      metric_date AS (
-        SELECT
-          MAX(metric_time) AS last_metric_time
-        FROM
-          metric
-      ),
-      --son todas las tenures de la ultima fecha medida
-      account_tenures AS (
-        SELECT
-          account_id,
-          metric_value AS account_tenure
-        FROM
-          metric
-          INNER JOIN metric_date ON metric_time = last_metric_time
-        WHERE
-          metric_name_id = 8 --account tenure
-          AND metric_value >= 14
-      )
-      --tienes todas las subscripciones del id con la copia del tenure last
-    SELECT
-      s.account_id,
-      d.last_metric_time,
-      SUM(
-        CASE
-          WHEN metric_name_id = 0 THEN metric_value
-          ELSE 0
-        END
-      ) AS like_per_month,
-      SUM(
-        CASE
-          WHEN metric_name_id = 1 THEN metric_value
-          ELSE 0
-        END
-      ) AS newfriend_per_month,
-      SUM(
-        CASE
-          WHEN metric_name_id = 2 THEN metric_value
-          ELSE 0
-        END
-      ) AS post_per_month,
-      SUM(
-        CASE
-          WHEN metric_name_id = 3 THEN metric_value
-          ELSE 0
-        END
-      ) AS adview_per_month,
-      SUM(
-        CASE
-          WHEN metric_name_id = 4 THEN metric_value
-          ELSE 0
-        END
-      ) AS dislike_per_month,
-      SUM(
-        CASE
-          WHEN metric_name_id = 33 THEN metric_value
-          ELSE 0
-        END
-      ) AS unfriend_per_month,
-      SUM(
-        CASE
-          WHEN metric_name_id = 6 THEN metric_value
-          ELSE 0
-        END
-      ) AS message_per_month,
-      SUM(
-        CASE
-          WHEN metric_name_id = 7 THEN metric_value
-          ELSE 0
-        END
-      ) AS reply_per_month,
-      SUM(
-        CASE
-          WHEN metric_name_id = 21 THEN metric_value
-          ELSE 0
-        END
-      ) AS adview_per_post,
-      SUM(
-        CASE
-          WHEN metric_name_id = 22 THEN metric_value
-          ELSE 0
-        END
-      ) AS reply_per_message,
-      SUM(
-        CASE
-          WHEN metric_name_id = 23 THEN metric_value
-          ELSE 0
-        END
-      ) AS like_per_post,
-      SUM(
-        CASE
-          WHEN metric_name_id = 24 THEN metric_value
-          ELSE 0
-        END
-      ) AS post_per_message,
-      SUM(
-        CASE
-          WHEN metric_name_id = 28 THEN metric_value
-          ELSE 0
-        END
-      ) AS unfriend_per_newfriend,
-      SUM(
-        CASE
-          WHEN metric_name_id = 27 THEN metric_value
-          ELSE 0
-        END
-      ) AS dislike_pcnt,
-      SUM(
-        CASE
-          WHEN metric_name_id = 30 THEN metric_value
-          ELSE 0
-        END
-      ) AS newfriend_pcnt_chng,
-      SUM(
-        CASE
-          WHEN metric_name_id = 31 THEN metric_value
-          ELSE 0
-        END
-      ) AS days_since_newfriend
-    FROM
-      metric m
-      INNER JOIN metric_date d ON m.metric_time = d.last_metric_time
-      INNER JOIN account_tenures a ON a.account_id = m.account_id
-      INNER JOIN subscription s ON m.account_id = s.account_id
-    WHERE
-      s.start_date <= d.last_metric_time
-      AND (
-        s.end_date >= d.last_metric_time
-        OR s.end_date IS NULL
-      )
-    GROUP BY
-      s.account_id,
-      d.last_metric_time
-    ORDER BY
-      s.account_id;
-      """
-    
+    with open(dataset_path, 'r') as sql_file:
+        sql_query = sql_file.read()
+
     print(sql_query)
 
     engine = create_engine(database_url)
@@ -667,17 +410,42 @@ def Forecasting():
 
     hist_df.to_csv('Generated/current_churnhist.csv', header=True)
 
-CreateDataset()
-GenerateStats('Generated/original.csv')
-ScoreData()
-GenerateStats('Generated/scores.csv')
-CreateLoadingMatrix()
-ApplyLoadingMatrix()
-LogisticRegressionAnalysis()
+import argparse
+from pathlib import Path
 
-CreateCurrentDataset()
-RescoringCurrentDataset()
-Forecasting()
+if __name__ == "__main__":
 
+    parser = argparse.ArgumentParser(description="A ml pipeline")
+    parser.add_argument("train_sql_path", help="Path to sql file to extract training dataset.")
+    parser.add_argument("test_sql_path", help="Path to sql file to extract test dataset.")
 
+    args = parser.parse_args()
 
+    print(args)
+
+    #print(type(Path(args.train_sql_path).parent))
+
+    path = str(Path(args.train_sql_path).parent)
+
+    print(type(path))
+    
+    CreateDataset(args.train_sql_path, path)
+
+    GenerateStats(path + '/original.csv')
+    
+    ScoreData(path)
+    
+    GenerateStats(path + '/scores.csv')
+    
+    """
+    CreateLoadingMatrix()
+    
+    ApplyLoadingMatrix()
+    
+    LogisticRegressionAnalysis()
+    
+    CreateCurrentDataset(args.test_sql_path)
+    
+    RescoringCurrentDataset()
+    Forecasting()    
+    """
