@@ -32,7 +32,7 @@ def GenerateStats(path_file):
     summary['nonzero'] = churn_data.astype(bool).sum(axis=0) / churn_data.shape[0]
     summary = summary[['count','nonzero','mean','std','skew','min','1%','25%','50%','75%','99%','max']]
     summary.columns = summary.columns.str.replace("%", " pct")
-    print(i.split('.')[0])
+    #print(i.split('.')[0])
     summary.to_csv(i.split('.')[0] + '_stats.csv', header=True)
 
 
@@ -78,10 +78,10 @@ def ScoreData(path_directory):
     
     data_scores.to_csv(path_directory + "/scores.csv",header=True)
 
-    print(skewed_columns)
-    print(fattail_columns)
-    print(mean_vals)
-    print(std_vals)
+    #print(skewed_columns)
+    #print(fattail_columns)
+    #print(mean_vals)
+    #print(std_vals)
     
     score_params_df = pd.DataFrame(
         {
@@ -92,7 +92,7 @@ def ScoreData(path_directory):
         },index=skewed_columns.index
     )
 
-    print(score_params_df)
+    #print(score_params_df)
     
     score_params_df.to_csv(path_directory + '/score_params.csv')
 
@@ -227,13 +227,12 @@ def LogisticRegressionAnalysis(path_directory):
     grouped_data = pd.read_csv(path_directory + '/groupscore.csv',index_col=[0,1])
     grouped_data
 
-    y = grouped_data['is_churn'].astype(np.bool)
-    #is retention 
-    y = ~y
-    
-    y
+    y = grouped_data['is_churn'].astype(int)
 
-    X = grouped_data.drop(['is_churn'], axis=1)
+    y = np.subtract(1, y)
+    
+    X = grouped_data.drop(['is_churn'],axis=1)
+    
     X
 
     #lasso regression l1
@@ -277,7 +276,7 @@ def LogisticRegressionAnalysis(path_directory):
     coef_df.to_csv(path_directory + '/logreg_summary.csv',index=False)
 
     with open(path_directory + '/model.pkl', 'wb') as fid:
-        print(fid)
+        #print(fid)
         pickle.dump(retain_reg, fid)
 
 
@@ -300,17 +299,17 @@ def CreateDataset(dataset_path, path_directory):
     DB_NAME = 'churn'
     
     database_url = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-    print(database_url)
+    #print(database_url)
 
     with open(dataset_path, 'r') as sql_file:
         sql_query = sql_file.read()
     
-    print(sql_query)
+    #print(sql_query)
 
     engine = create_engine(database_url)
     connection = engine.connect()
     
-    print(connection)
+    #print(connection)
 
     df = pd.read_sql(sql_query,connection, index_col=['account_id','observation_date'])
     df.to_csv(path_directory + '/original.csv',header=True)
@@ -324,17 +323,17 @@ def CreateCurrentDataset(dataset_path, path_directory):
     
     database_url = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     
-    print(database_url)
+    #print(database_url)
 
     with open(dataset_path, 'r') as sql_file:
         sql_query = sql_file.read()
 
-    print(sql_query)
+    #print(sql_query)
 
     engine = create_engine(database_url)
     connection = engine.connect()
     
-    print(connection)
+    #print(connection)
 
     df = pd.read_sql(sql_query,connection, index_col=['account_id','last_metric_time'])
     df.to_csv(path_directory + '/test_set.csv', header=True)
@@ -360,7 +359,7 @@ def RescoringCurrentDataset(path_directory):
     scaled_data = (current_data - score_df['mean']) / score_df['std']
     scaled_data
 
-    print(scaled_data)
+    #print(scaled_data)
 
     scaled_data.to_csv(path_directory + '/current_scores.csv')
 
@@ -369,7 +368,7 @@ def RescoringCurrentDataset(path_directory):
 
     current_data_grouped = pd.DataFrame(grouped_ndarray,columns=load_mat_df.columns, index=current_data.index)
 
-    print(current_data_grouped)
+    #print(current_data_grouped)
     
     current_data_grouped.to_csv(path_directory + '/current_groupscore.csv', header=True)
 
@@ -377,7 +376,7 @@ def Forecasting(path_directory):
     
     with open(path_directory + '/model.pkl',mode='rb') as fid:
         logreg_model = pickle.load(fid)
-        print(logreg_model)
+        #print(logreg_model)
     
     current_score_df = pd.read_csv(path_directory + '/current_groupscore.csv', index_col=[0,1])
     current_score_df.shape
@@ -390,7 +389,7 @@ def Forecasting(path_directory):
              columns=['churn_prob','retention_prob'], 
              index=current_score_df.index)
 
-    print(predict_df)
+    #print(predict_df)
     
     predict_df.to_csv(path_directory + '/current_predictions.csv', header=True)
 
@@ -412,7 +411,7 @@ def Forecasting(path_directory):
         }
     )
 
-    print(hist_df)
+    #print(hist_df)
 
     hist_df.to_csv(path_directory + '/current_churnhist.csv', header=True)
 
@@ -433,7 +432,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    print(args)
 
     #CREASTE EL DIRECTORIO
     
@@ -441,7 +439,7 @@ if __name__ == "__main__":
     
     path = str(Path(args.output_directory))
 
-    print(path)
+    print("--------------------TEST: " + path + "---------------------")
     
     CreateDataset(args.train_sql_path, path)
 
@@ -462,6 +460,3 @@ if __name__ == "__main__":
     RescoringCurrentDataset(path)
     
     Forecasting(path)    
-
-    """
-    """
