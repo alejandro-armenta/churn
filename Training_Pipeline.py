@@ -15,6 +15,29 @@ from sqlalchemy import create_engine
 import matplotlib.pyplot as plt
 
 
+def calc_lift(y_real, y_pred):
+
+    #churn rate
+    
+    overall_churn = sum(y_real) / len(y_real)
+    
+    #print(overall_churn * 100)
+    
+    sort_by_pred = [(x,y) for x, y in sorted(
+        zip(y_pred, y_real))]
+    
+    i90 = int(round(len(y_real)*0.9))
+
+    top_decile_count = sum([p[1] for p in sort_by_pred[i90:]])
+
+    #de todos los reales en el espacio del 10% cuantos son churn 
+    top_decile_churn = top_decile_count / (len(y_real) - i90)
+
+    lift = top_decile_churn / overall_churn
+
+    return lift
+
+
 #GET STATISTICS
 
 def GenerateStats(path_file):
@@ -53,7 +76,7 @@ def ScoreData(path_directory):
     stats = stats.drop('is_churn', axis=0)
     
     #estas son las normales
-    skew_threshold = 2.8
+    skew_threshold = 5.0
     skewed_columns = (stats['skew'] > skew_threshold) & (stats['min'] >= 0.0)
     skewed = skewed_columns[skewed_columns]
     
@@ -452,6 +475,8 @@ if __name__ == "__main__":
     CreateLoadingMatrix(path)
     
     ApplyLoadingMatrix(path)
+
+    #asta aqui necesitas
     
     LogisticRegressionAnalysis(path)
     
