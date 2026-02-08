@@ -5,3 +5,5 @@
 python Training_Pipeline.py ./myTrain.sql ./myTest.sql ./TestChurn0
 
 python Training_Pipeline.py ./train.sql ./test.sql ./TestChurn1
+
+python Training_Pipeline.py ./complete.sql ./test.sql ./TestChurnComplete
