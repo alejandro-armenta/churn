@@ -3,8 +3,14 @@
 I worked in customer retention making churn prediction for customers.
                                                        
 
-I made different metrics for customers based on behavioral data and subscription data:
+I made different metrics from raw data of customer events and subscriptions. 
 
+It is based on behavioral data and subscription data.
+
+I used SQL for generating metrics and storing them into the database PostgreSQL.
+
+This is the SQL for pivoting the data into a dataset for analysis.
+           
 ```sql
 --SQL for pivoting data in the database
                          
@@ -50,7 +56,7 @@ group by m.account_id, metric_time, observation_date, is_churn
 order by observation_date,m.account_id;
 ```
 
-This is an example of the dataset I made using SQL, you can look at the metrics I used for prediction in XGBoost:
+And this is the result:
 
 |account_id          |observation_date    |is_churn            |like_per_month        |newfriend_per_month|post_per_month|adview_per_month|dislike_per_month|unfriend_per_month                                                                 |message_per_month |reply_per_month   |account_tenure    |adview_per_post     |reply_per_message|like_per_post     |post_per_message  |unfriend_per_newfriend|dislike_pcnt          |unfriend_per_newfriend_scaled|newfriend_pcnt_chng|days_since_newfriend|unfriend_28day_avg_84day_obs|unfriend_28day_avg_84day_obs_scaled|
 |--------------------|--------------------|--------------------|----------------------|-------------------|--------------|----------------|-----------------|-----------------------------------------------------------------------------------|------------------|------------------|------------------|--------------------|-----------------|------------------|------------------|----------------------|----------------------|-----------------------------|-------------------|--------------------|----------------------------|-----------------------------------|
