@@ -1,16 +1,18 @@
 # Churn Forecasting
 
 I worked in customer retention making churn prediction for customers.
+                                                       
 
-I made different metrics for customers as:
-                         
-- like per month.
-- newfriend per month.
-- post per month.
-- adview per month.
-- dislike per month.
-- unfriend per month.
+I made different metrics for customers based on behavioral data and subscription data:
 
+```[language-identifier]
+// Your code goes here
+function hello() {
+  console.log("Hello, world!");
+}
+```
+
+This is an example of the dataset I made using SQL, you can look at the metrics I used for prediction in XGBoost:
 
 |account_id          |observation_date    |is_churn            |like_per_month        |newfriend_per_month|post_per_month|adview_per_month|dislike_per_month|unfriend_per_month                                                                 |message_per_month |reply_per_month   |account_tenure    |adview_per_post     |reply_per_message|like_per_post     |post_per_message  |unfriend_per_newfriend|dislike_pcnt          |unfriend_per_newfriend_scaled|newfriend_pcnt_chng|days_since_newfriend|unfriend_28day_avg_84day_obs|unfriend_28day_avg_84day_obs_scaled|
 |--------------------|--------------------|--------------------|----------------------|-------------------|--------------|----------------|-----------------|-----------------------------------------------------------------------------------|------------------|------------------|------------------|--------------------|-----------------|------------------|------------------|----------------------|----------------------|-----------------------------|-------------------|--------------------|----------------------------|-----------------------------------|
@@ -26,11 +28,11 @@ I made different metrics for customers as:
 |421                 |2020-03-01          |False               |251.0                 |26.0               |144.0         |251.0           |57.0             |1.0                                                                                |26.0              |14.0              |55.0              |1.7430556           |0.53846157       |1.7430556         |5.5384617         |0.03846154            |0.18506494            |0.01958042                   |0.13043475         |1.0                 |0.33333334                  |0.5090909                          |
 
 
-This is the pipeline for dataset generation:
+After dataset generation, the metrics are scaled and grouped together into groups based in correlation between metrics.
+    
+This is the pipeline for dataset grouping and scoring:
 
 ![ale](Cohorts/pipeline.png)
-
-
 
 I made feature engineering for metrics about customers' events and subscriptions:
 
