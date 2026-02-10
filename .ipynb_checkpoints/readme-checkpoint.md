@@ -156,24 +156,15 @@ This is the pipeline for dataset grouping and scoring:
 
 ![ale](Cohorts/pipeline.png)
 
-I made feature engineering for metrics about customers' events and subscriptions:
+## XGBOOST MODEL
+                     
+After I made the dataset I made the XGBoost model and made crossvalidation for hyperparamater tuning.
 
+I used top decile lift and roc auc as metrics to evaluate the model.
 
-                           
-This is a forecasting model for churn prediction.
+I created my own scorer for lift and used roc auc from scikit learn.
 
-![ale](crossval_regression.png)
-
-I made hyper parameter tuning with cross validation:
-
-The hyperparameters tuned were:
-
-- learning rate 
-- max_depth
-- min child weight
-- number of estimators
-
-This is the result for the best XGBoost model which has 0.7196238811183722 of ROC_AUC:
+This is the result for the best XGBoost model which has 0.7196238811183722 of ROC_AUC.
 
 Here you can look at the best model with the hyperparameters chosen:
 
