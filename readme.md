@@ -7,7 +7,9 @@ I made different metrics for customers based on behavioral data and subscription
 
 ```[language-identifier]
 // SQL for pivoting data in the database
-set search_path = 'socialnet7'; with observation_params as
+set search_path = 'socialnet7'; 
+
+with observation_params as
 (
     select  interval '7 day' as metric_period,
     '2020-03-01'::timestamp as obs_start,
