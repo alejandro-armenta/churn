@@ -5,8 +5,9 @@ I worked in customer retention making churn prediction for customers.
 
 I made different metrics for customers based on behavioral data and subscription data:
 
-```[language-identifier]
-// SQL for pivoting data in the database
+```sql
+--SQL for pivoting data in the database
+                         
 set search_path = 'socialnet7'; 
 
 with observation_params as
@@ -46,7 +47,7 @@ inner join observation o on m.account_id = o.account_id
     and m.metric_time > (o.observation_date - metric_period)::timestamp
     and m.metric_time <= o.observation_date::timestamp
 group by m.account_id, metric_time, observation_date, is_churn
-order by observation_date,m.account_id
+order by observation_date,m.account_id;
 ```
 
 This is an example of the dataset I made using SQL, you can look at the metrics I used for prediction in XGBoost:
