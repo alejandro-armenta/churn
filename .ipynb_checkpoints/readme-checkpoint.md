@@ -2,7 +2,8 @@
 
 I worked in customer retention making churn prediction for customers.
                                                        
-
+## SQL DATASET Generation
+                                                       
 I made different metrics from raw data of customer events and subscriptions. 
 
 It is based on behavioral data and subscription data.
@@ -72,7 +73,10 @@ And this is the result:
 |421                 |2020-03-01          |False               |251.0                 |26.0               |144.0         |251.0           |57.0             |1.0                                                                                |26.0              |14.0              |55.0              |1.7430556           |0.53846157       |1.7430556         |5.5384617         |0.03846154            |0.18506494            |0.01958042                   |0.13043475         |1.0                 |0.33333334                  |0.5090909                          |
 
 
-After dataset generation, the metrics are scaled and grouped together into groups based in correlation between metrics.
+## Metric Statistics
+                                                     
+And these are the statistics of each metric. These statistics are used to normalize the metrics.
+                                                     
 
 |FIELD1|count                        |nonzero|mean                                         |std                |skew                 |min |1 pct|25 pct      |50 pct    |75 pct     |99 pct            |max      |
 |------|-----------------------------|-------|---------------------------------------------|-------------------|---------------------|----|-----|------------|----------|-----------|------------------|---------|
@@ -98,7 +102,54 @@ After dataset generation, the metrics are scaled and grouped together into group
 |unfriend_28day_avg_84day_obs|25806.0                      |0.5039525691699605|0.24212716073781285                          |0.2939168878211054 |1.282504509515786    |0.0 |0.0  |0.0         |0.33333334|0.33333334 |1.0               |2.3333333|
 |unfriend_28day_avg_84day_obs_scaled|25806.0                      |0.5039525691699605|0.30910598619545837                          |0.39562381762618437|1.715533274119719    |0.0 |0.0  |0.0         |0.33333334|0.5283019  |1.5555556         |4.2      |
 
+## Scoring metrics
+                                                     
+The metrics are transformed based on the skew and whether they are negative:
+fattail_score are negative and highly skewed.
+and skew scores are positive but highly skewed.
 
+|FIELD1|skew_score                   |fattail_score|mean                                         |std                |
+|------|-----------------------------|-------------|---------------------------------------------|-------------------|
+|like_per_month|True                         |False        |3.696694558351651                            |1.3064737670738882 |
+|newfriend_per_month|False                        |False        |6.624002170037976                            |7.993498358467066  |
+|post_per_month|True                         |False        |3.0016729786334104                           |1.1735840347725328 |
+|adview_per_month|True                         |False        |2.9827594958447414                           |1.208859661500904  |
+|dislike_per_month|True                         |False        |2.2392088105792336                           |1.061185533167938  |
+|unfriend_per_month|False                        |False        |0.3027202976052081                           |0.54855852163725   |
+|message_per_month|True                         |False        |3.2330272598368857                           |1.3274682151528998 |
+|reply_per_month|True                         |False        |2.2352085552908236                           |1.3292585899054798 |
+|account_tenure|False                        |False        |71.06510113926994                            |26.747373644961094 |
+|adview_per_post|True                         |False        |0.7761967189806431                           |0.5474739107542783 |
+|reply_per_message|False                        |False        |0.3851747567456406                           |0.3236438845352696 |
+|like_per_post|True                         |False        |1.2087999061324468                           |0.7251477440695786 |
+|post_per_message|True                         |False        |0.8453150738349696                           |0.8771211356211015 |
+|unfriend_per_newfriend|False                        |False        |0.08656659140110828                          |0.24431719258071752|
+|dislike_pcnt|False                        |False        |0.23051088514168408                          |0.20743508629090027|
+|unfriend_per_newfriend_scaled|True                         |False        |0.07400563772805094                          |0.13836114274615283|
+|newfriend_pcnt_chng|False                        |False        |0.18253982911247382                          |0.9196034171977002 |
+|days_since_newfriend|False                        |False        |7.450709137409905                            |11.607070121598447 |
+|unfriend_28day_avg_84day_obs|False                        |False        |0.24212716073781285                          |0.2939168878211054 |
+|unfriend_28day_avg_84day_obs_scaled|False                        |False        |0.30910598619545837                          |0.39562381762618437|
+                                                     
+
+## Hierarchichal Clustering
+                                                     
+After dataset generation, the metrics are scaled and grouped together into groups based in correlation between metrics.
+These are the groupings of metrics based on hierarchical clustering.
+                                                     
+
+|FIELD1|metrics                      |
+|------|-----------------------------|
+|metric_group_0|adview_per_month&#124;adview_per_post&#124;like_per_month&#124;like_per_post&#124;newfriend_per_month&#124;post_per_message&#124;post_per_month|
+|metric_group_1|unfriend_28day_avg_84day_obs&#124;unfriend_28day_avg_84day_obs_scaled&#124;unfriend_per_month&#124;unfriend_per_newfriend&#124;unfriend_per_newfriend_scaled|
+|metric_group_2|message_per_month&#124;reply_per_month|
+|dislike_per_month|dislike_per_month            |
+|account_tenure|account_tenure               |
+|reply_per_message|reply_per_message            |
+|dislike_pcnt|dislike_pcnt                 |
+|newfriend_pcnt_chng|newfriend_pcnt_chng          |
+|days_since_newfriend|days_since_newfriend         |
+                                                     
 This is the pipeline for dataset grouping and scoring:
 
 ![ale](Cohorts/pipeline.png)
