@@ -4,7 +4,7 @@ I worked in customer retention making churn prediction for customers.
 
 This is the pipeline for dataset generation:
 
-![ale]('Cohorts/Screenshot 2026-01-18 225012.png')
+![ale](Cohorts/pipeline.png)
 
 I made feature engineering for metrics about customers' events and subscriptions:
 
